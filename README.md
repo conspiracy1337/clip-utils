@@ -1,6 +1,6 @@
 # ClipUtils
 
-## A Simple and Leightweight Program that allows for Video Compression and Trimming using FFmpeg + Python.
+## A Simple and Lightweight Program that allows for Video Compression and Trimming using FFmpeg + Python.
 
 ### DOWNLOAD: https://github.com/conspiracy1337/clip-utils/releases/download/1.0.0/ClipUtils.exe
 
