@@ -332,9 +332,14 @@ class VideoCompressor(QtWidgets.QMainWindow):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(500, 350)
+        MainWindow.setFixedSize(MainWindow.size())
+        MainWindow.setWindowFlags(
+            QtCore.Qt.Window | 
+            QtCore.Qt.WindowCloseButtonHint | 
+            QtCore.Qt.WindowMinimizeButtonHint
+        )
         font = QtGui.QFont()
         font.setFamily("Open Sans")
-        icon_path = resource_path("appicon.png")
         MainWindow.setFont(font)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
