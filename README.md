@@ -6,7 +6,7 @@
 
 If Windows Defender shows a Warning you can safely ignore it as its just a reminder that the App is not signed (which costs upwards of $150 per year). If you are still suspicious just compile the py source code file yourself.
 
-Virus Total Scan: https://www.virustotal.com/gui/file/3183ce8be31aadb1fe4afbb6fe392144582c8597d449479cb69148465f518e16
+Virus Total Scan: https://www.virustotal.com/gui/file/c9dff8b9c91bd044d047e2b3975abada844d77b9e945ef894929a781f33df621
 
 Drop a video file into the field to get started
 
