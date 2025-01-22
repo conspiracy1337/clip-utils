@@ -226,7 +226,6 @@ class VideoCompressorThread(QThread):
         except Exception:
             return None
 
-
 class FileDropWidget(QtWidgets.QWidget):
     def __init__(self, main_window, parent=None):
         super().__init__(parent)
@@ -285,7 +284,6 @@ class FileDropWidget(QtWidgets.QWidget):
         except Exception:
             return False
 
-
 class CustomSpinBox(QtWidgets.QDoubleSpinBox):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -319,7 +317,6 @@ class CustomSpinBox(QtWidgets.QDoubleSpinBox):
             self.lineEdit().clear()
             return
         super().keyPressEvent(event)
-
 
 class VideoCompressor(QtWidgets.QMainWindow):
     def __init__(self):
@@ -645,8 +642,6 @@ class VideoCompressor(QtWidgets.QMainWindow):
                 self.output_text.setStyleSheet("color: black; text-decoration: none; font-family: Open Sans;")
                 self.output_text.setCursor(QtCore.Qt.ArrowCursor)
         return super().eventFilter(obj, event)
-
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
