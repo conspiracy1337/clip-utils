@@ -4,7 +4,8 @@
 
 ### DOWNLOAD: https://github.com/conspiracy1337/clip-utils/releases/download/1.0.0/ClipUtils.exe
 
-If Windows Defender shows a Warning you can safely ignore it as its just a reminder that the App is not signed (which costs upwards of $150 per year)
+If Windows Defender shows a Warning you can safely ignore it as its just a reminder that the App is not signed (which costs upwards of $150 per year). If you are still suspicious just compile the py source code file yourself.
+
 Virus Total Scan: https://www.virustotal.com/gui/file/3183ce8be31aadb1fe4afbb6fe392144582c8597d449479cb69148465f518e16
 
 Drop a video file into the field to get started
