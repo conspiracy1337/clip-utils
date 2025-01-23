@@ -4,7 +4,7 @@ import subprocess
 import time
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QApplication, QFileDialog, QWidget, QMessageBox
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent
 from PyQt5.QtMultimedia import QSoundEffect
 from PyQt5.QtCore import QUrl
@@ -101,15 +101,33 @@ class VideoCompressorThread(QThread):
     def trim_video(self, output_file=None):
         output = output_file or self.output_file
         ffmpeg_path, ffprobe_path = get_ffmpeg_path()
+        
+        duration = self.end_time - self.start_time
+        
         command = [
-            ffmpeg_path, "-i", self.input_file,
-            "-ss", str(self.start_time), "-to", str(self.end_time),
-            "-c:v", "copy", "-c:a", "copy", "-y", output
+            ffmpeg_path,
+            "-ss", str(self.start_time),
+            "-i", self.input_file,
+            "-to", str(duration),
+            "-c:v", "copy",
+            "-c:a", "copy",
+            "-avoid_negative_ts", "make_zero",
+            "-y", output
         ]
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW, text=True)
+        
+        process = subprocess.Popen(
+            command, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            creationflags=subprocess.CREATE_NO_WINDOW, 
+            text=True
+        )
+        
         for line in process.stderr:
             self.log_signal.emit(line.strip())
+            
         process.wait()
+        
         if process.returncode != 0:
             raise RuntimeError("Trimming failed.")
 
@@ -226,6 +244,7 @@ class VideoCompressorThread(QThread):
         except Exception:
             return None
 
+
 class FileDropWidget(QtWidgets.QWidget):
     def __init__(self, main_window, parent=None):
         super().__init__(parent)
@@ -284,6 +303,7 @@ class FileDropWidget(QtWidgets.QWidget):
         except Exception:
             return False
 
+
 class CustomSpinBox(QtWidgets.QDoubleSpinBox):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -318,9 +338,12 @@ class CustomSpinBox(QtWidgets.QDoubleSpinBox):
             return
         super().keyPressEvent(event)
 
+
 class VideoCompressor(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
+        self.current_version = "1.0.0"
+        self.check_for_updates()
         self.selected_file = None
         self.sound_effect = QSoundEffect()
         sound_path = resource_path("done.wav")
@@ -471,7 +494,7 @@ class VideoCompressor(QtWidgets.QMainWindow):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "Clip Utils - github.com/conspiracy1337/clip-utils"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "ClipUtils v1.0.0 - github.com/conspiracy1337/clip-utils"))
         self.file_box.setTitle(_translate("MainWindow", "Input File"))
         self.target_label.setText(_translate("MainWindow", "Target Size (MB)"))
         self.start_label.setText(_translate("MainWindow", "Start Time (seconds)"))
@@ -483,6 +506,98 @@ class VideoCompressor(QtWidgets.QMainWindow):
         self.new_size_text.setText(_translate("MainWindow", "NEW Filesize: N/A"))
         self.old_length_text.setText(_translate("MainWindow", "OLD Video Length: N/A"))
         self.new_length_text.setText(_translate("MainWindow", "NEW Video Length: N/A"))
+
+    def check_for_updates(self):
+        try:
+            response = requests.get(
+                "https://api.github.com/repos/conspiracy1337/clip-utils/releases/latest",
+                headers={"Accept": "application/vnd.github.v3+json"},
+                timeout=5
+            )
+            response.raise_for_status()
+            release = response.json()
+            
+            if release["tag_name"] != self.current_version:
+                self.prepare_update(release)
+        except Exception as e:
+            print(f"Update check failed: {str(e)}")
+
+    def prepare_update(self, release):
+        update_msg = self.show_update_message()
+        try:
+            appdata_path = os.getenv('APPDATA')
+            cliputils_folder = os.path.join(appdata_path, "ClipUtils")
+            current_exe = sys.executable
+            exe_dir = os.path.dirname(current_exe)
+            exe_name = os.path.basename(current_exe)
+            bak_file = os.path.join(exe_dir, f"{exe_name}.bak")
+            batch_path = os.path.join(cliputils_folder, "update.bat")
+
+            asset = next((a for a in release["assets"] if a["name"].endswith(".exe")), None)
+            if not asset:
+                raise ValueError("No EXE asset found in release")
+
+            download_url = asset["browser_download_url"]
+            temp_exe = os.path.join(exe_dir, f"_{exe_name}")
+
+            with requests.get(download_url, stream=True) as r:
+                r.raise_for_status()
+                with open(temp_exe, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+
+            batch_script = f"""@echo off
+echo Waiting for current process to exit...
+taskkill /F /PID {os.getpid()} >nul 2>&1
+timeout /t 2 /nobreak >nul
+echo Updating ClipUtils...
+del "{bak_file}" >nul 2>&1
+del "%~f0"
+"""
+            with open(batch_path, "w") as f:
+                f.write(batch_script)
+
+            if os.path.exists(bak_file):
+                os.remove(bak_file)
+            os.rename(current_exe, bak_file)
+
+            os.rename(temp_exe, os.path.join(exe_dir, exe_name))
+
+            subprocess.Popen([batch_path], shell=True)
+            sys.exit(0)
+
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Update Failed",
+                f"Failed to perform update: {str(e)}\nPlease download manually.",
+                QMessageBox.Ok
+            )
+        finally:
+            update_msg.close()
+
+    def show_update_message(self):
+        window = QtWidgets.QWidget()
+        window.setWindowTitle("Updating")
+        window.setWindowIcon(QtGui.QIcon(resource_path("appicon.png")))
+
+        window.resize(500, 100)
+        window.setFixedSize(window.size())
+        label = QtWidgets.QLabel("ClipUtils is updating...\nPlease restart the App after this window disappears.", window)
+        label.setAlignment(QtCore.Qt.AlignCenter)
+        font = QtGui.QFont()
+        font.setFamily("Open Sans")
+        font.setPointSize(14)
+        label.setFont(font)
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(label)
+        window.setLayout(layout)
+
+        window.show()
+        QtWidgets.QApplication.processEvents()
+
+        return window
 
     def has_video_stream(self, file_path):
         ffmpeg_path, ffprobe_path = get_ffmpeg_path()
@@ -581,7 +696,7 @@ class VideoCompressor(QtWidgets.QMainWindow):
         self.output_text.setText(f"Output File: {output_file}")
         self.output_file_path = output_file
         self.new_size_text.setText(f"NEW Filesize: {new_size}")
-        self.sound_effect.setVolume(0.75)
+        self.sound_effect.setVolume(0.5)
         self.sound_effect.play()
         appdata_path = os.getenv('APPDATA')
         cliputils_folder = os.path.join(appdata_path, "ClipUtils")
@@ -642,6 +757,8 @@ class VideoCompressor(QtWidgets.QMainWindow):
                 self.output_text.setStyleSheet("color: black; text-decoration: none; font-family: Open Sans;")
                 self.output_text.setCursor(QtCore.Qt.ArrowCursor)
         return super().eventFilter(obj, event)
+
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
