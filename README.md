@@ -4,7 +4,7 @@
 
 ### DOWNLOAD: https://github.com/conspiracy1337/clip-utils/releases/download/v1.0.0/ClipUtils.exe
 
-#### Exported Clips are stored in VIDEOS/ClipUtils, you can also press on the Output File Text to directly open the new file.
+##### Exported Clips are stored in VIDEOS/ClipUtils, you can also press on the Output File Text to directly open the new file.
 #### Drop a video file into the field to get started!
 
 If Windows Defender shows a Warning you can safely ignore it as its just a reminder that the App is not signed (which costs upwards of $200 per year). 
