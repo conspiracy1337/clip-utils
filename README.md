@@ -2,11 +2,14 @@
 
 ## A Simple and Lightweight Program that allows for Video Compression and Trimming using FFmpeg + Python.
 
-### DOWNLOAD: https://github.com/conspiracy1337/clip-utils/releases/download/1.0.0/ClipUtils.exe
+Exported Clips will be stored in VIDEOS/ClipUtils, you can also press the Output File text to directly open the new file.
+
+### DOWNLOAD: https://github.com/conspiracy1337/clip-utils/releases/download/v1.0.0/ClipUtils.exe
 
 If Windows Defender shows a Warning you can safely ignore it as its just a reminder that the App is not signed (which costs upwards of $200 per year). If you are still suspicious just compile the py source code file yourself.
 
-Virus Total Scan: https://www.virustotal.com/gui/file/c96cfbf57a45c100f88af71fd2ca43bd5bfd616c4e6cd32c53ed58a66c585c10
+Virus Total Scan: https://www.virustotal.com/gui/file/22cb3a53c6910adf3b765e46fcce1f9c10b8f13a2c98cd5f61e271ec951ff2ab
+It says suspicious on 3/69 anti viruses (only trash ones lol), but if you click the "Behaviour" tab you can see everything it does for yourself.
 
 Drop a video file into the field to get started
 
