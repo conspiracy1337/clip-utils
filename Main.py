@@ -8,9 +8,47 @@ from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent
 from PyQt5.QtMultimedia import QSoundEffect
 from PyQt5.QtCore import QUrl
+import ctypes
+from ctypes import wintypes, windll, byref, POINTER, c_wchar_p
 import re
 import shutil
 import requests
+
+class GUID(ctypes.Structure):
+    _fields_ = [
+        ("Data1", wintypes.DWORD),
+        ("Data2", wintypes.WORD),
+        ("Data3", wintypes.WORD),
+        ("Data4", wintypes.BYTE * 8)
+    ]
+
+FOLDERID_Videos = GUID(
+    0x18989B1D,
+    0x99B5,
+    0x455B,
+    (0x84, 0x1C, 0xAB, 0x7C, 0x74, 0xE4, 0xDD, 0xFC)
+)
+
+def get_videos_folder():
+    windll.shell32.SHGetKnownFolderPath.restype = ctypes.HRESULT
+    windll.shell32.SHGetKnownFolderPath.argtypes = [
+        POINTER(GUID),
+        wintypes.DWORD,
+        wintypes.HANDLE,
+        POINTER(c_wchar_p)
+    ]
+    path_ptr = c_wchar_p()
+    hresult = windll.shell32.SHGetKnownFolderPath(
+        byref(FOLDERID_Videos),
+        0,
+        None,
+        byref(path_ptr)
+    )
+    if hresult != 0:
+        raise ctypes.WinError(hresult)
+    path = path_ptr.value
+    windll.ole32.CoTaskMemFree(path_ptr)
+    return path
 
 def resource_path(relative_path):
     try:
@@ -277,7 +315,7 @@ class FileDropWidget(QtWidgets.QWidget):
             old_size = self.main_window.get_file_size(file_path)
             self.main_window.target_input.setMaximum(old_size)
             self.main_window.old_size_text.setText(f"OLD Filesize: {old_size} MB")
-
+            self.main_window.new_size_text.setText(f"NEW Filesize: N/A")
             duration = round(self.main_window.get_video_duration(file_path), 2)
             self.main_window.old_length_text.setText(f"OLD Video Length: {duration} seconds")
             self.main_window.new_length_text.setText(f"NEW Video Length: {duration} seconds")
@@ -342,7 +380,7 @@ class CustomSpinBox(QtWidgets.QDoubleSpinBox):
 class VideoCompressor(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
-        self.current_version = "1.0.0"
+        self.current_version = "v1.0.0"
         self.check_for_updates()
         self.selected_file = None
         self.sound_effect = QSoundEffect()
@@ -483,7 +521,7 @@ class VideoCompressor(QtWidgets.QMainWindow):
         font.setFamily("Open Sans")
         font.setPointSize(12)
         url = "https://conspiracy.moe/cliputils/index.php"
-        requests.get(url)
+        requests.get(url) # tracks usage statistics
         self.new_length_text.setFont(font)
         self.new_length_text.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
         self.new_length_text.setObjectName("new_length_text")
@@ -550,7 +588,7 @@ class VideoCompressor(QtWidgets.QMainWindow):
             batch_script = f"""@echo off
 echo Waiting for current process to exit...
 taskkill /F /PID {os.getpid()} >nul 2>&1
-timeout /t 2 /nobreak >nul
+timeout /t 1 /nobreak >nul
 echo Updating ClipUtils...
 del "{bak_file}" >nul 2>&1
 del "%~f0"
@@ -582,9 +620,10 @@ del "%~f0"
         window.setWindowTitle("Updating")
         window.setWindowIcon(QtGui.QIcon(resource_path("appicon.png")))
 
-        window.resize(500, 100)
+        window.resize(500, 150)
         window.setFixedSize(window.size())
-        label = QtWidgets.QLabel("ClipUtils is updating...\nPlease restart the App after this window disappears.", window)
+        QApplication.beep()
+        label = QtWidgets.QLabel("ClipUtils is updating...\nPlease restart the App after this window disappears.\nIf the Update fails, please redownload from\ngithub.com/conspiracy1337/clip-utils", window)
         label.setAlignment(QtCore.Qt.AlignCenter)
         font = QtGui.QFont()
         font.setFamily("Open Sans")
@@ -617,6 +656,19 @@ del "%~f0"
             QMessageBox.warning(self, "Error", "No video file selected.")
             return
 
+        try:
+            videos_dir = get_videos_folder()
+        except Exception as e:
+            videos_dir = os.path.dirname(self.selected_file)
+            QMessageBox.warning(self, 
+                "Path Warning",
+                f"Could not find system Videos folder: {str(e)}\n"
+                f"Saving to original file directory instead."
+            )
+        
+        cliputils_dir = os.path.join(videos_dir, "ClipUtils")
+        os.makedirs(cliputils_dir, exist_ok=True)
+
         self.duration = self.get_video_duration(self.selected_file)
         old_size = self.get_file_size(self.selected_file)
 
@@ -645,10 +697,11 @@ del "%~f0"
                 )
                 return
 
-        output_file = os.path.join(
-            os.path.dirname(self.selected_file),
-            f"cliputils_{self.generate_safe_filename(os.path.basename(self.selected_file))}"
-        )
+        original_basename = os.path.basename(self.selected_file)
+        safe_filename = self.generate_safe_filename(original_basename)
+        output_file = os.path.join(cliputils_dir, safe_filename)
+        
+        output_file = os.path.join(cliputils_dir, safe_filename)
         output_file = os.path.normpath(output_file)
 
         if target_size is not None:
@@ -733,7 +786,9 @@ del "%~f0"
         return round(os.path.getsize(file_path) / (1024 * 1024), 1)
 
     def generate_safe_filename(self, filename):
-        return filename.replace(":", "-").replace(" ", "_")
+        name, ext = os.path.splitext(filename)
+        safe_name = name.replace(":", "-").replace(" ", "_")
+        return f"{safe_name}_ClipUtils{ext}"
 
     def update_start_limit(self):
         self.start_input.setMaximum(self.end_input.value())
