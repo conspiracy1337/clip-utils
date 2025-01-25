@@ -127,13 +127,19 @@ class VideoCompressorThread(QThread):
         self.temp_file = os.path.join(self.cliputils_folder, temp_filename)
         self.temp_files.append(self.temp_file)
         self.trim_video(output_file=self.temp_file)
+        trimmed_size = self.get_file_size(self.temp_file)
+        if trimmed_size <= self.target_size:
+            try:
+                shutil.move(self.temp_file, self.output_file)
+                return
+            except Exception as e:
+                raise RuntimeError(f"Failed to use trimmed video: {str(e)}")
 
         duration = self.get_video_duration(self.temp_file)
         if duration is None:
             raise ValueError("Failed to get duration of trimmed video.")
 
         target_bitrate = (self.target_size * 8 * 1024) / duration
-
         self.compress_video(input_file=self.temp_file, target_bitrate=target_bitrate)
 
     def trim_video(self, output_file=None):
@@ -380,7 +386,7 @@ class CustomSpinBox(QtWidgets.QDoubleSpinBox):
 class VideoCompressor(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
-        self.current_version = "v1.0.0"
+        self.current_version = "v1.0.1"
         self.check_for_updates()
         self.selected_file = None
         self.sound_effect = QSoundEffect()
@@ -532,7 +538,7 @@ class VideoCompressor(QtWidgets.QMainWindow):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "ClipUtils v1.0.0 - github.com/conspiracy1337/clip-utils"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "ClipUtils v1.0.1 - github.com/conspiracy1337/clip-utils"))
         self.file_box.setTitle(_translate("MainWindow", "Input File"))
         self.target_label.setText(_translate("MainWindow", "Target Size (MB)"))
         self.start_label.setText(_translate("MainWindow", "Start Time (seconds)"))
